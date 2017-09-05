@@ -1,0 +1,209 @@
+# 1. Introducción
+
+## Electroencefalograma (EEG)
+
+La técnica de electroencefalografía consiste en medir la actividad eléctrica del cerebro. Para su medición, se utilizan electrodos (sensores) que se ubican en el cuero cabelludo. Cada electrodo mide en forma independiente las fluctuaciones de voltaje, generando una señal analógica que es amplificada y luego digitalizada. Los sistemas de EEG suelen variar en cantidad y ubicación de los electrodos, y en la frecuencia de muestreo. Sistemas de monitero clínicos suelen utilizar 8, 16 o 24 electrodos que se adhieren al cuero cabelludo mediante una pasta conductora. Por otro lado, equipos de EEG destinados a la investigación poseen 32, 64, 128 o 256 electrodos cuyo contacto con la piel es mediante gel electrolítico o solución salina.
+
+Los datos provistos para la resolución de este trabajo práctico provienen de un sistema de EEG con 256 electrodos de solucion salina digitalizados a 250 Hz.
+
+![Montage EEG](https://gist.githubusercontent.com/fraimondo/d217a0736db06afa2ea0b1c202e37c8c/raw/62dd86cbc1c4062b4b8e59b71cf529a3927aa51f/figura_1_topo.png)
+*Ubicación de los 256 electrodos*
+
+
+## Datos de EEG
+Los datos corresponden a una evaluación cognitiva realizada a 20 sujetos. Cada evaluación dura aproximadamente 30 minutos, en los cuales son estimulados auditivamente aproximadamente unas 1200 veces.
+
+Uno de los principales problemas del EEG es su naturaleza ruidosa. Los voltajes que se miden en el cuero cabelludo son una mezcla de actividad eléctrica del cerebro, actividad muscular (EMG) y ruido del ambiente. Se denomina _artefactos_ a toda fluctuacion de voltaje registrado que no proviene de actividad neuronal. La tarea de "limpiar" los datos comunmente se denomina _preprocesamiento_. Existen varios metodos y mecanismos para aislar la actividad neuronal, aunque no hay una única solución óptima. Para facilitar el desarrollo del trabajo práctico, los datos provistos ya han sido pre-procesados y se encuentran [aquí](http://calamaro.exp.dc.uba.ar/~fraimondo/cienciadatos/data/). Los detalles de procesamiento de desarrollan a continuación:
+
+1. Los datos son filtrados en 4 pasos consecutivos:
+- Highpass en 0.5 Hz (butterworth de orden 6).
+- Lowpass en 45 Hz (butterworth de orden 8).
+- Notch en 50 Hz.
+- Notch en 100 Hz.
+2. La grabación continua de 30 minutos es cortada tomando como parámetro el inicio de la estimulación auditiva (T0). Cada segmento (denominado _epoch_ o _trial_) tiene una duración de 1.54 segundos y comienza 200 ms antes de T0. En otras palabras, cada _epoch_ comienza en -0.200s y termina en 1.34s donde 0s es la ocurrencia de un estímulo auditivo.
+3. Para poder comparar los epochs, se realiza lo que se denomina _Baseline Correction_. En los 200ms previos al estimulo auditivo, todos los epochs estan en un periodo de reposo (no hay estimulación). La técnica de _baseline correction_ consiste en centrar en cero la media durante ese periodo para cada electrodo.
+4. Epochs y electrodos con artefactos son descartados por un metodo automatizado basado en _peak-to-peak amplitude_ y detección de electrodos con alta varianza.
+5. Los datos son re-referenciados utilizando _average reference_ (para más información consultar la bibliografía).
+6. La información de los electrodos que fueron descartados en el punto 4 es obtenida interpolando los vecinos para que todos los EEG contengan la misma cantidad de electrodos (256).
+
+![EEG filtrado](https://gist.githubusercontent.com/fraimondo/d217a0736db06afa2ea0b1c202e37c8c/raw/b33f70b9abe86fe4513e74b903e8e64978e400a2/figura_1_eeg.png)
+*Segmento de EEG preprocesado*
+
+### Resultados de la evaluación cognitiva
+
+De los 20 sujetos, el 50% posee capacidades cognitivas normales (Grupo S), mientras que los resultados para el 50% restante determinaron que poseen capacidades cognitivas severamente disminuidas (Grupo P).
+
+## Análisis de señales
+
+### Transformada de Fourier
+
+La transformada de Fourier es uno de los pilares computacionales de muchos métodos de análisis de EEG. Su mecanismo consiste en computar el producto entre la señal y ondas senoidales de distintas frecuencias (_kernels_). Cada onda senoidal tiene tres caracteristicas: frecuencia, potencia (o amplitud) y fase. En consecuencia, el resultado de la transformada de Fourier es una representacion tridimensional de la serie temporal que contiene la misma información. Es importante destacar que a partir del resultado de la transformada de Fourier es posible reconstruir la serie temporal original. Adicionalmente, existe una representacion 2D del resultado cuya primer dimension es la frecuencia y la segunda representa la amplitud y fase mediante números complejos, usando magnitud y ángulo respectivamente.
+
+El algoritmo mas utilizado para computar la transformada de Fourier se denomina Fast Fourier Transform (FFT). Para computar una transformada de fourier, scipy contiene un paquete dedicado ([scipy.fftpack](https://docs.scipy.org/doc/scipy/reference/fftpack.html)).
+
+Cohen: cápitulo 11
+
+### Short-time FFT
+
+Una de las limitaciones principales de la transformada de Fourier es la perdida de la resolucion temporal. El método no contempla las variaciones en el tiempo. Para resolver esta limitación, el método consiste en utilizar una ventana deslizante y computar FFT para cada ventana, obteniendo así cierta resolucion temporal. Debido a que la resolucion frecuencial de la transformada es igual a N/2 + 1, donde N es el numero de puntos a utilizar, existe el mecanismo de _padding_ o extension con ceros que aumenta la cantidad de frecuencias distinguibles.
+
+En consecuencia, se agregan nuevos parametros:
+- Tipo de ventana: _Hann_, _Hamming_, _Gauss_
+- Longitud de la ventana
+- Superposicion de la ventana
+- Tamaño del segmento para FFT (> ventana implica _padding_)
+
+Uno de los métodos mas utilizados es el método de Welch: [scipy.signal.welch](https://docs.scipy.org/doc/scipy-0.14.0/reference/generated/scipy.signal.welch.html).
+
+Cohen: cápitulo 15
+
+### Interpretacion de las frecuencias
+
+Un EEG es tipicamente descripto en terminos de oscilaciones. Estas oscilaciones son agrupadas en bandas de frecuencia:
+
+- Delta < 4 Hz
+- 4 Hz <= Theta < 8 Hz
+- 8 Hz <= Alpha < 13 Hz
+- 13 Hz <= Beta < 30 Hz
+- 30 Hz <= Gamma < Nyquist
+
+En este caso, la frecuencia de Nyquist es 125 Hz, aunque el filtro aplicado en el pre-procesamiento pone el límite en 45 Hz.
+
+El cálculo del poder espectral en cada banda se realiza sumando los valores obtenidos de la FFT que corresponden a las frecuencias incluídas en la misma. Adicionalmente, suelen computarse los valores normalizados, que indican la relacion entre el poder espectral de cada banda sobre el poder espctral total
+
+### Análisis de Información
+
+Los métodos basados en teoría de la información como entropía, entropia mutua, entropía condicional e información mutua forman un conjunto de técnicas estadísticas/matemáticas de gran utilidad en ciencia, ingeniería y comunicaciones. Las métricas basadas en la teoría de la información crean un marco para la cuantificación de información y conectividad entre señales. En el caso de EEG, puede ser para evaluar la cantidad de información en cada electrodo, la información mutua o conectividad entre pares de electrodos, etc.
+
+#### A nivel de información y electrodos independientes:
+##### - Entropía
+La entropía es una medida de la cantidad de información que posee una serie de símbolos. La formula esta data por:
+![Entropía](https://wikimedia.org/api/rest_v1/media/math/render/svg/7de5d59a442f5305853d4392826b1f51dc43f6d0)
+
+donde *n* es el número de símbolos y *p(x)* es la probabilidad de observar *x*.
+
+[Entropía en Wikipedia](https://en.wikipedia.org/wiki/Entropy_(information_theory))
+
+##### - Complejidad de Kolmogorov
+
+La complejidad de Kolmogorov (*K*) de una serie de símbolos (*x*) es la longitud del programa mas corto (en algun lenguaje de programación) que produce esa seria de símbolos.
+
+Por ejemplo, si tuviesemos la siguiente serie de símbolos (*Y*):
+```python
+abcabcabcabcabcabcabcabcabcabcabc
+```
+
+podríamos escribir el siguiente programa en python:
+```python
+'abc' * 11
+```
+
+En este caso, la longitud *L* del programa *Y* = *L(Y)* = 10
+```
+In [1]: len("'abc' * 11")
+Out[1]: 10
+```
+
+Una de las limitaciones de la complejidad de Kolmogorov es que no es computable. Sin embargo, es posible computar cotas superiores para *K(X)*. En nuestro ejemplo, sabemos que *K(Y) <= 10*.
+
+En la práctica, es posible computar una cota superior para *K(X)* comprimiendo la serie simbólica, adjuntando el algoritmo decompresor al archivo y calculando el tamaño final del archivo.
+En otras palabras, usando el algoritmo *Lempel-Ziv* o ZIP:
+
+![Complejidad de Kolmogorov](https://latex.codecogs.com/gif.latex?\inline&space;K(X)&space;<=&space;LEN(ZIP(X)&space;&plus;&space;UNZIP)&space;=&space;LEN(ZIP(X))&space;&plus;&space;LEN(UNZIP))
+
+
+Cómo el decompresor ZIP es una constante, puede retirarse de la ecuación y simplemente utilizar
+
+![Complejidad de Kolmogorov](https://latex.codecogs.com/gif.latex?\inline&space;K'(X)&space;<=&space;LEN(ZIP(X)))
+
+
+[Complejidad de Kolmogorov en Wikipedia](https://en.wikipedia.org/wiki/Kolmogorov_complexity)
+
+#### Inter-señales:
+##### - Entropía conjunta
+La entropía conjunta es la entropía de un par de variables aleatorias. Es la version bivariada de la entropía definida previamente.
+
+![Entropía conjunta](https://wikimedia.org/api/rest_v1/media/math/render/svg/7559a44e21e23f0560ff421bd71c7fc73731bbc7)
+
+[Entropía conjunta en Wikipedia](https://en.wikipedia.org/wiki/Joint_entropy)
+
+##### - Información mutua
+La información mutua, como su nombre lo define, es la cantidad de información que dos variables comparten.
+Una forma de expresar la información mutua es en función de la entropía y la entropía conjunta:
+
+![Información mutua](https://gist.githubusercontent.com/fraimondo/d217a0736db06afa2ea0b1c202e37c8c/raw/50300ee1cc383368c4c54197aad5ea7175478202/mi_equation.png)
+
+[Información mutua en Wikipedia](https://en.wikipedia.org/wiki/Mutual_information)
+
+#### Transformaciones simbólicas
+
+Todas las medidas descriptas previamente trabajan sobre seríes simbólicas con alfabetos finitos, como por ejemplo, texto ASCII. Sin embargo, los datos de EEG estan guardados como elementos de punto flotante de doble precision (64 bits). Si calculamos la entropía de un canal de EEG de 300 muestras, probablemente obtengamos que la probabilidad de obtener cada simbolo posible es ![](https://latex.codecogs.com/gif.latex?\inline&space;0) o ![](https://latex.codecogs.com/gif.latex?\inline&space;\frac{1}{300}). El alfabeto sigue siendo finito con ![](https://latex.codecogs.com/gif.latex?\inline&space;2^{64}) elementos, pero la cantidad de simbolos es muy grande.
+
+Una solución a este problema consiste en transformar la serie temporal de punto flotante a una serie simbólica con un alfabeto finito de cardinalidad acotada.
+
+##### Discretización de valores (cuantificación)
+
+Para discretizar los valores, basta con dividir la amplitud de nuestra señal en N *bines*, y para cada muestra, computar el número de *bin* al que corresponde. Por ejemplo, si nuestra señal tiene los valores entre -10uV y 10uV, y *N=20*, los bines se definen en intervalos de 1uv entre -10 y 10.
+```python
+In [1]: x = [-7.3, -6.2, 3.4, 2.1, 0.2, 9.2]
+In [2]: symb(x)
+Out[2]: [2, 3, 13, 12, 10, 19]
+```
+
+Uno de los parámetros de esta transformación es *N* o el número de bins. Un valor pequeño de N puede resultar en una serie simbólica con poca sensitividad con respecto a la distribución de los datos. Por otro lado, un valor muy grande de N vuelve al problema original en donde hay 0 o 1 valor por bin.
+
+Existen ciertas reglas para determinar un valor apropiado para *N*. La regla *Freedman-Diaconis* establece que el valor óptimo de *N* se leaciona an rango entre cuartiles de la distribución y el número de puntos:
+
+![Freedman-Diaconis](https://latex.codecogs.com/gif.latex?\inline&space;N=\lceil\frac{max(x)-min(x)}{2Q_xn^{-1/3}}\rceil)
+
+donde ![](https://latex.codecogs.com/gif.latex?\inline&space;Q_x}) es el rango entre cuartiles de la distribucion de los datos y ![](https://latex.codecogs.com/gif.latex?\inline&space;n) es la cantidad de muestras de la señal.
+
+Otra regla es la propuesta por *Scott*, una variante de la reegla de *Freedman-Diaconis*:
+
+![Freedman-Diaconis](https://latex.codecogs.com/gif.latex?\inline&space;N=\lceil\frac{max(x)-min(x)}{3.5\sigma&space;n^{-1/3}}\rceil)
+
+donde ![](https://latex.codecogs.com/gif.latex?\inline&space;\sigma}) es la desviación estándar.
+
+##### Patrones temporales (cualificación)
+
+Adicionalmente, en la transformación simbólica se pueden incluir datos cualitativos de la señal. En otras palabras, la tranformación extrae patrones de la señal.
+
+Para mas información acerca de esta transfomación particular, consultar [King, Sitt et al 2013](http://www.sciencedirect.com/science/article/pii/S0960982213009366#app2)
+
+# 2. Ejercicios
+
+## 2.1 Análisis de frecuencias
+
+a) Computar uno de los posibles análisis espectrales.
+
+a.1) Calcular la media entre los electrodos 8, 44, 80, 131 y 185 (el primer electrodo es el 0) y realizar una figura que muestre las frecuencias en el eje Y, los epochs en el eje X, y la potencia usando una escala de color como en el ejemplo:
+
+![ROI](https://gist.githubusercontent.com/fraimondo/d217a0736db06afa2ea0b1c202e37c8c/raw/ccf45851fdce41a8e89c9c6e9caaf50ffc75960a/figura_2_1_a1.png)
+
+a.2) Calcular la potencia media (entre epochs) para cada frecuencia y graficar la potencia en funcion de la frecuencia para cada canal, como en el ejemplo:
+
+![Electrodos](https://gist.githubusercontent.com/fraimondo/d217a0736db06afa2ea0b1c202e37c8c/raw/e51ac6ed1885d670230f7bd1ec71e64e6a41288f/figura_2_1_a2.png)
+
+
+b) Calcular los valores de cada banda de frecuencia, promediados entre los electrodos (todos) y epochs para cada sujeto.
+
+c) Tomar la potencia de cada sujeto en la banda _Alpha_ y graficar cada uno de los graficos categóricos de [seaborn](http://seaborn.pydata.org/api.html).
+
+¿Cuál recomendaría para graficar y comparar distribuciones?
+
+(Si la respuesta es `boxplot`, pensarlo despues de leer [esto](https://www.autodeskresearch.com/publications/samestats))
+
+d) Para cada banda de frecuencia, graficar según lo elegido en el punto c) y realizar un test estadístico apropiado.
+
+e) Repetir los puntos b) y d) para los valores normalizados.
+
+## 2.2 Análisis de información
+
+a) Computar una medida de información intra-electrodo. Calcular la media entre canales y epochs para cada sujeto. Realizar el gráfico elegido en el punto c) de la sección anterior, acompañado del test estadístico apropiado.
+
+b) Repetir el punto a) para una medida inter-electrodo.
+
+# Bibliografía
+- [Scott's Rule](https://www.researchgate.net/profile/David_Scott32/publication/250594515_Scott%27s_rule/links/5504555a0cf24cee39feca36/Scotts-rule.pdf)
+- [EEGLab Preprocessing Tools ](https://sccn.ucsd.edu/wiki/Chapter_04:_Preprocessing_Tools)
+- Cohen Mike X. Analyzing Neural Time Series Data: Theory and Practice. 2014.
