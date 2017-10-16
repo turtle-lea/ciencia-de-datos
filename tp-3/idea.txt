@@ -1,0 +1,16 @@
+-Luego de computar la curva ROC para cada feature y aplicar la tecnica de cross validation pudimos observar, que la tendencia de la variacion en las curvas es similar dado que estamos graficando un conjunto y un subconjunto de el. Consideramos que al utilizar menos instancias para entrenar al clasificador de Logistic regression existen esas diferencias. Pero si utilizaramos el mismo conjunto las curvas serian iguales.
+
+
+---
+1-Standard Scaler
+2-Feature Selection utilizando solo el 10%.
+3-SVC
+¿Qué diferencia encuentra? 
+¿Y si utilizamos el 20% de los features? 
+¿Qué pasa si probamos y encontramos que utilizando el 35% de los features obtenemos la mejor AUC?
+---
+-Realizando el analisis del Pipeline, seleccionando los 'k' mejores, observamos que el area bajo la curva fue aumentando a medida que se incluian mas instancias de entrenamiento pero se elegian unas pocas de las mejores.
+
+Entrenando el pipeline con 2 instancias y seleccionando el mejor, obtuvimos 50% de area bajo la curva.
+Aumentamos las instancias a 12 instancias y seleccionamos los 2 mejores, y obtuvimos 100%.
+Mientras que si aumentabamos a 16 las instancias de entrenamiento y seleccionabamos las 9 mejores, el area bajo la curva resultaba 50%.
