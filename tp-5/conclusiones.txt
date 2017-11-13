@@ -1,0 +1,47 @@
+TP5
+1. Implementación
+Implemente el modelo en pymc3 para los priors Beta(1,1) y Beta(100,100), y grafique las posteriors resultantes de observar 6 caras de 6 tiradas.
+
+-Impementamos la funcion "plt_" que crea el modelo con los prámetros 'n=cantiad de ensayos,h= cantidad de éxitos,alpha y beta de la función beta'. Luego graficamos un histograma de la distribución.
+
+Queremos evavluar cuan cargada esta nuestra moneda a partir del resultado de un experimento, a lo cual llamamos posterior. Creamos un modelo, con los prámetros 'n=cantiad de ensayos, h= cantidad de éxitos, alpha y beta de la función beta'. En el modelo, relacionamos el valor de alfa y beta con la confianza que tenemos en que la monenda no este cargada. Y vemos que a miedida que tenemos mas confianza sobre la moneda representado por nuestro prior, es decir, que estamos mas seguros que es honesta, menos nos alcanza el resultado(salieron 6 caras en 6 tiradas), para decir que la moneda este cargada.
+
+2. Resúmenes
+Calcule el MAP (máximo a posteriori) y las medias de ambas posteriors.
+
+- Calculamos en MAP para alfa=beta=1 y para alfa=beta=100, con el objetivo de encontrar el tita que maximiza la distrubución de nuestra postirior.
+Resulto que para alfa=beta=1, el maximo tita es aproximadamente 1, lo que significa que para una moneda que no tenemos referencia si esta cargada o no, la mayor probabilidad que obtengamos en 6 tiradas 6 exitos, es que haya estado cargada. Por otra parte, para alfa=beta=100 el maximo tita es aproximadamente 0.5, lo que significa que si estamos mas seguros que nuestra moneda es honesta, la mayor probabilidad de obtener 6 exitos en 6 tiradas la obtenemos si nuestra moneda esta 1/2="un poco" cargada.
+
+3. Prediccion
+Prediga, para ambos priors, el resultado de una nueva tirada de moneda.
+
+-Resulto que si no tenemos conocimiento sobre la moneda (alfa=beta=1), obtenemos una distribucion de cantidad de caras cercana a 6, lo que es razonable, dado que lo mas probable era tener una moneda cargada (ej anterior).
+De igual modo, si estabamos mas seguros que nuestra moneda era honesta (alfa=beta=100), nos da una distribucion de cantidad de caras por experimento mas cercana a una normal, con en promedio 3 caras por experimento, que también coincide con lo esperado(por el ejercicio anterior).
+
+4. Otros datos
+Repita los puntos anteriores para una situación en la que se observan 20 caras de 20 tiradas, y otra en la que se observan 3 caras de 3 tiradas. ¿Que puede concluir de los priors elegidos? ¿Y del modelo en general?
+
+-Lo que ocuere es que se profundizan los conceptos que observamos para el experimento con 6 tiradas y 6 caras.
+En general los datos tienen la misma tendencia, se observan pequeñas variaciones, que corresponden a la cantidad de evidencia que se tiene sobre la moneda. 
+
+Si tenemos un alto prior y mucha evidencia: concluimos que la moneda esta muy cargada.
+Con un Prior alto y poca evidencia: la moneda también esta muy cargada, pero levemente menos.
+Si tenemos Prior bajo y evidencia alta: moneda estará algo cargada.
+Con un Prior bajo y poca evidencia: moneda no estará cargada.
+
+Datos:
+(20,20)
+beta 100
+0.5458715590206333
+beta 1
+0.9999996155210419
+(3,3)
+beta 100
+0.507462653575417
+beta 1
+0.999996924163579
+
+5. Prior
+Pensando en su propia experiencia, considere cuántas caras consecutivas le harıan empezar a sospechar que la moneda está cargada. A partir de este número y usando el modelo, diga cuáles son los parámetros de su prior Beta.
+
+-
